@@ -1,0 +1,122 @@
+\documentclass[12pt,a4paper]{article}
+\usepackage{amsmath, amssymb}
+\usepackage{geometry}
+\usepackage[dvipsnames]{xcolor}
+\geometry{margin=1in}
+\usepackage[style=apa, backend=biber]{biblatex}
+\addbibresource{ref.bib}
+\usepackage{pdfpages}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+\usepackage{xltabular}
+\usepackage{multirow}
+\usepackage{appendix}
+\usepackage{graphicx}
+
+\begin{document}
+
+\begin{center}
+    {\Large CS-C3240 - Machine Learning D} \\
+    \vspace{0.25cm}
+    Project Stage 1 - 19 September 2025\\
+    \vspace{0.5cm}
+    {\LARGE \textbf{Classifying pancreatic cancer \\with biomarker data}} \\
+\end{center}
+
+\section{Introduction}
+Machine learning (ML) approaches are increasingly applied in medical diagnostics for early cancer detection using simple, noninvasive bioindicators. In 2020, \textcite{debernardi-2020} investigated a highly accurate diagnostic method for PDAC (pancreatic ductal adenocarcinoma)—the most common type of pancreatic cancer—based on the level of certain proteins in the patient's urine. My project utilizes this data set provided in their publication to develop a supervised multi-class classification ML model that can distinguish an assigned patient into three different diagnostic groups: (1) healthy, (2) having non-cancerous pancreatic diseases, and (3) having PDAC. 
+\vspace{0.25cm}
+\\ This report has five sections: this first introductory section briefly explains the scenario of the application; the second section analyzes the dataset and formulates the problem; the third section focuses on selected methods; the fourth section discusses results; and the final section concludes on overall findings. 
+
+\section{Problem Formulation}
+
+This data set is collected from various clinical centers, and each data point from this set represents a single specimen collected from a specific patient. Among 590 urine specimens, there are 183 healthy samples, 208 non-cancerous (or benign) samples, and 199 PDAC samples (Figure \ref{fig1}). This dataset was directly downloaded from Kaggle (https://www.kaggle.com/datasets/johnjdavisiv/urinary-biomarkers-for-pancreatic-cancer). The features that will be examined are the patients' age and the quantitative measurements of six specific proteins: plasma CA19-9, creatinine, LYVE1, REG1B, TFF1, and REG1A (Appendix Table \ref{tab:features}). These biomarkers are scientifically considered relevant for the detection of pancreatic cancer \parencite{debernardi-2020}. In addition, Figure 1 also demonstrates relatively clear differences in the distribution of these characteristics in three diagnostic classes, so that they are highly relevant in the prediction of pancreatic cancer.
+
+\begin{figure}
+\centering
+    \includegraphics[width=\textwidth]{output_2_0.png}
+    \caption{Distribution of the features respect to three diagnostic targets.}
+    \label{fig1}
+\end{figure}
+
+\section{Methods}
+
+\subsection{Data preprocessing}
+Initially, redundant columns from the original dataset are removed; these columns include sample ID, sample origin, group of patients in the research, specific pancreatic disease diagnostic for non-cancerous patients, and cancer stages for PDAC-suffering patients. From the original dataset, some entry values for plasma CA19-9 and REG1A were missing. If all the data points with a missing value are removed, there will be only 209 data points remaining, which is insufficient for this ML model to effectively study seven features. Therefore, either the mean or the median of the existing values from the corresponding features is used to compromise these missing entries. From the histogram for each feature with respect to three target diagnostic categories (healthy, benign, and PDAC) (Figure \ref{fig1}), the data is extremely skewed for plasma CA19-9 and REG1A. Therefore, the median is selected to fill in the missing data entries.
+\subsection{ML model}
+\subsubsection{Multinomial logistic regression}
+Logistic regression could be a suitable algorithm for this classification task. With three targets, the original binary logistic regression classifier may not be suitable, so in this case, a multinomial logistic regression (MLR) is implemented. In short, for each of these three classes, the MLR model computes a logit following the dot product:
+\[\operatorname{score}(\mathbf{X}_{i},k) = \boldsymbol{\beta}_{k} \cdot \mathbf{X}_{i},\]
+where $\mathbf{X}_{i}$ is the vector of features' values for patient $i$, and $\boldsymbol{\beta}_{k}$ is the regression coefficients for target $k$ \parencite{wikipedia-2025}. Subsequently, the probability that patient $i$ is classified in category $k$ is computed with the softmax function:
+\[\Pr(Y_{i}=k) = \operatorname{softmax}(k, \boldsymbol{\beta}_{1} \cdot \mathbf{X}_{i}, \ldots, \boldsymbol{\beta}_{K} \cdot \mathbf{X}_{i})\]
+MLR is primarily selected because it's directly suitable for this multi-category task. Furthermore, through the underlying algorithms, its results are potentially interpretable for the doctors in case they need to comprehensively understand or examine how the clinical decision is predicted. 
+
+\subsubsection{Random Forest}
+Random forest (RF) is the second method being considered for this classification problem. In essence, RF combines two techniques, bagging and feature randomness, to generate several decision trees. Specifically, each tree is trained on a random subset (bagging), and each tree evaluates a random subset of features (feature randomness) so that the decision trees in the forest are uncorrelated \parencite{ibm-2025}. This method is robust and less sensitive to outliers and skewed distributions. Therefore, it is suitable for this problem, which has a multi-dimensional dataset and some skewed features. In addition, unlike logistic regression, this approach does not assume a linear relationship between features. Thus, RF is an appropriate method to be compared with MLR, and is potentially more suitable to evaluate complex biological correlations.
+
+\subsection{Loss function}
+
+With respect to an MLR model, multinomial logistic loss (cross-entropy loss) is selected as the most suitable loss function \parencite{gn-2023}. Accordingly, this loss function is also used to train the RF model. Regarding the algorithm of this loss function, initially, a true label $y$---a one-hot encoded vector---is created where only the correct target is marked as 1 (e.g., [0,0,1] if the PDAC class is correct), while the model generates a vector $\hat{y}$ containing predicted probabilities for each target. Subsequently, the loss for a single sample is generally calculated as:
+\[
+L_{CE}(\hat{y}, y) = - \sum_{k=1}^K y_k \log(\hat{y}_k)
+\]
+\[
+= - \log \hat{y}_c
+\]
+where $K$ here is the number of targets.   
+
+\subsection{Model validation}
+
+The size of this dataset is relatively small, and fitting with the median is already carried out in the data preprocessing stage. Thus, to enhance the reliability of this process, k-fold cross-validation is implemented. For this method, the dataset is divided into k equal-sized subsets, or "folds." The model is iteratively trained k times; in each iteration, it is trained on k - 1 subsets (training sets) and validated on the single remaining subset (validation set) \parencite{refaeilzadeh-2009}. In this case, $k=5$ is selected so that each fold contains 118 data points. Therefore, in each iteration, the model is trained with 472 samples (in $k-1=4$ folds) and validated with 118 samples. Eventually, after 5 iterations, the average performance score and corresponding standard deviation are computed. 
+
+\section{Results}
+From the appendix code, the average training loss and validation loss across 5 folds of MLR are 0.74 and 0.77, respectively. Meanwhile, the corresponding values for RF are 0.17 for training loss and 0.64 for validation loss. As the training and validation losses of MLR are considerably close, this model is not overfit. However, these errors are relatively high; therefore, MLR's accuracy score is only 63.05\%, which is possibly not reliable enough for a medical decision. In contrast, the RF model is overfitting since there is a significant gap between validation and training losses. RF model achieves an overall 72.03\% accuracy score, with a higher performance score than that of MLR in almost every fold. Thus, it outperforms the MLR model. Based on these results, RF is selected as the final approach for this classification task. 
+
+\section{Conclusion}
+In summary, this ML project develops a multi-class classifier with the random forest to diagnose pancreatic cancer mainly based on urinary biomarkers. The final model achieves a test accuracy of 77.12\% and a test loss of 0.5688, with 80\% training data and 20\% validation data. 
+\\Based on the appendix confusion matrices and plots, both MLR and RF clearly demonstrate higher correctness when identifying PDAC samples (category 3), while errors often occur between healthy and benign samples (categories 1 and 2). The possible interpretation for this issue could be the high similarities in the biological profiles of some healthy and benign samples. Thus, to further investigate the applicability of this model, RF is implemented again with a binary classification task, where the features comprise 6 biomarker levels and patients' ages, and the target includes only two categories, in which 0 indicates non-cancerous samples, and 1 indicates PDAC ones. In this task, the ML model gained a significantly higher result with an accuracy score of 90\%. This result shows that biomarker data is a promising indicator for an efficient non-invasive screening tool.
+\\However, these results directly indicate the need for further improvement. The first approach is to increase the size of this dataset, since the number of samples is small and some features have missing values. When screening through the works of other developers with this dataset on Kaggle, I found that gradient boosting machines (GBMs), such as LightGBM and XGBoost, are highly suitable for this task. These approaches can be found in the 'Codes' section on the Kaggle data source attached above. In general, GBMs are also tree-ensembled techniques, in which a tree is built once at a time and the new tree is trained to improve the performance of the previous trees (boosting). These approaches demonstrated better performance with non-linear biological relationships and tabular data of this problem. For example, several GBM-based works on Kaggle achieve approximately 90\% accuracy score in a relatively similar categorical classification task; thus, these methods have high potential in improving ML prediction correctness in this problem. 
+
+\newpage
+\printbibliography
+
+\begin{appendices}
+\section{Appendix}
+\begin{table}[h!]
+\centering
+\caption{Features and target examined in this application (adapted from \textcite{debernardi-2020})}
+\label{tab:features}
+\renewcommand{\arraystretch}{1.2} 
+\begin{tabular}{|>{\raggedright\arraybackslash}p{3cm}|>
+{\raggedright\arraybackslash}p{1.5cm}|>{\raggedright\arraybackslash}p{2cm}|>{\raggedright\arraybackslash}p{8.5cm}|}
+\hline
+\textbf{Column Name} &
+\textbf{Role} &
+\textbf{Type} &
+\textbf{Details} \\
+\hline
+Age & Feature & Continuous & Age in years \\
+\hline
+Diagnosis & Target & Categorical & 1 = control (no pancreatic disease), 2 = benign hepatobiliary disease (119 of which are chronic pancreatitis); 3 = Pancreatic ductal adenocarcinoma, i.e., pancreatic cancer \\
+\hline
+Plasma CA19-9 (U/ml) & Feature & Continuous & Blood plasma levels of CA 19–9 monoclonal antibody that is often elevated in patients with pancreatic cancer. Only assessed in 350 patients. \\
+\hline
+Creatinine (mg/ml) & Feature & Continuous & Urinary biomarker of kidney function \\
+\hline
+LYVE1 (ng/ml) & Feature & Continuous & Urinary levels of Lymphatic vessel endothelial hyaluronan receptor 1, a protein that may play a role in tumor metastasis \\
+\hline
+REG1B (ng/ml) & Feature & Continuous & Urinary levels of a protein that may be associated with pancreas regeneration. \\
+\hline
+TFF1 (ng/ml) & Feature & Continuous & Urinary levels of Trefoil Factor 1, which may be related to regeneration and repair of the urinary tract \\
+\hline
+REG1A (ng/ml) & Feature & Continuous & Urinary levels of a protein that may be associated with pancreas regeneration. Only assessed in 306 patients. \\
+\hline
+\end{tabular}
+\end{table}
+
+\newpage
+\includepdf[pages=-]{projectML.pdf}
+\end{appendices}
+
+\end{document}
