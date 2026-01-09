@@ -16,3 +16,6 @@ This project utilizes the Pancreatic Cancer Biomarker Dataset originally publish
 
 
 The goal was to develop an accurate, non-invasive screening tool for early pancreatic cancer detection using machine learning classification.
+
+### Results
+After evaluating the data (i.e., processing missing values, and selecting features), Multinomial Linear Regression and Random Forest are implemented in this task in 5 folds cross validation. RF outperformed MLR in classification accuracy, with 77% in multinomial (healthy, benign, and cancerous) and 90% in binary (cancerous or non-cancerous) classification problem. Highest confusion occurred between healthy and benign cases, possibly because of biological similarities. The level of Plasma CA19-9 and REG1A were most predictive features in this task. 
